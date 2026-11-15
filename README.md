@@ -43,10 +43,13 @@ python -m src.data.prepare
 
 # 3. Analyse exploratoire : ouvrir et exécuter notebooks/01_eda.ipynb
 
-# 4. Lancer les tests
+# 4. Backtest des stratégies de référence (train + validation)
+python -m src.backtest.run_baselines
+
+# 5. Lancer les tests
 python -m pytest
 
-# 5. Lancer l'application (à partir de l'étape 7)
+# 6. Lancer l'application (à partir de l'étape 7)
 streamlit run app/app.py
 ```
 

@@ -1,0 +1,5 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+1/N,18.81,11.75,1.53,1.95,-16.72,1.13,-1.8,3.61
+Indice SPY,12.66,12.9,0.99,1.24,-19.35,0.65,-2.04,0.0
+Markowitz max Sharpe,11.42,11.48,1.0,1.21,-22.37,0.51,-1.85,48.54
+Variance minimale,5.67,3.97,1.41,1.97,-5.0,1.13,-0.57,8.44
