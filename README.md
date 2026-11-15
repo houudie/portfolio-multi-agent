@@ -1,6 +1,5 @@
 # Assistant multi-agent pour la sélection intelligente de portefeuilles financiers
 
-Projet Centrale Casablanca — rendu le 30 novembre 2026.
 
 Six agents spécialisés (Profil, Données, Prévision, Risque, Allocation, Conseiller), pilotés par un orchestrateur, transforment le profil d'un investisseur en portefeuille expliqué. Un moteur de backtest compare chaque allocation à des stratégies de référence (1/N, Markowitz, indice).
 
@@ -68,7 +67,7 @@ Toutes les étapes lisent `config.yaml` : univers d'actifs, dates de découpage 
 
 | Membre | Rôle |
 | --- | --- |
-| Membre A | Données, EDA, backtest, évaluation finale |
-| Membre B | Modèles de prévision, interprétabilité (SHAP) |
-| Membre C | Agent RL (PPO), agent Allocation |
-| Membre D | Orchestrateur, agent Conseiller, Streamlit, rapport |
+| Abderrahmane  | Données, EDA, backtest, évaluation finale |
+| Rachid | Modèles de prévision, interprétabilité (SHAP) |
+| Hatim | Agent RL (PPO), agent Allocation |
+| Houda | Orchestrateur, agent Conseiller, Streamlit, rapport |
