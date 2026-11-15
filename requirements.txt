@@ -31,5 +31,8 @@ shap>=0.45
 streamlit>=1.35
 plotly>=5.20
 
+# Notebooks
+ipykernel>=6.29
+
 # Tests
 pytest>=8.0

@@ -26,7 +26,7 @@ def download_fred(series: dict[str, str], start: str, end: str) -> pd.DataFrame:
         df = pd.read_csv(FRED_URL.format(series=code), index_col=0, parse_dates=True)
         df.columns = [name]
         frames.append(pd.to_numeric(df[name], errors="coerce").to_frame())
-    macro = pd.concat(frames, axis=1)
+    macro = pd.concat(frames, axis=1, sort=True)
     return macro.loc[start:end]
 
 

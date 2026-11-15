@@ -38,10 +38,15 @@ pip install -r requirements.txt
 # 1. Télécharger les données (Yahoo Finance + FRED)
 python -m src.data.download
 
-# 2. Lancer les tests
-pytest
+# 2. Nettoyer, découper (train / validation / test) et créer les features
+python -m src.data.prepare
 
-# 3. Lancer l'application (à partir de l'étape 7)
+# 3. Analyse exploratoire : ouvrir et exécuter notebooks/01_eda.ipynb
+
+# 4. Lancer les tests
+python -m pytest
+
+# 5. Lancer l'application (à partir de l'étape 7)
 streamlit run app/app.py
 ```
 
@@ -54,7 +59,15 @@ Toutes les étapes lisent `config.yaml` : univers d'actifs, dates de découpage 
 | Source | Contenu | Accès |
 | --- | --- | --- |
 | Yahoo Finance (`yfinance`) | Prix journaliers ajustés des actions et ETF | Gratuit, sans clé |
-| FRED (Federal Reserve Bank of St. Louis) | Taux à 10 ans, VIX, taux directeur | Gratuit, sans clé (CSV) |
+| FRED (Federal Reserve Bank of St. Louis) | Taux à 10 ans (DGS10), VIX (VIXCLS), taux directeur effectif quotidien (DFF) | Gratuit, sans clé (CSV) |
+
+### Préparation (`src/data/prepare.py`)
+
+1. **Nettoyage :** la période commence quand tous les actifs sont cotés (META depuis mai 2012) ; les trous de cotation de 5 jours maximum sont comblés avec le dernier prix connu.
+2. **Découpage chronologique :** train jusqu'au 31/12/2019, validation 2020–2021, test 2022–2025.
+3. **Features causales** par actif : momentum 21/63/126 jours, volatilité 21/63 jours, RSI 14, drawdown sur 252 jours ; features de marché (SPY) ; macro décalée d'un jour.
+4. **Cible :** rendement log des 21 prochains jours de bourse.
+5. **Purge :** les 21 derniers jours du train et de la validation sont retirés pour que les cibles ne débordent pas sur la période suivante.
 
 ## Règles anti-fuite de données
 

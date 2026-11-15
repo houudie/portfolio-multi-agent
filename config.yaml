@@ -14,7 +14,13 @@ universe:
 macro_fred:
   DGS10: taux_10_ans
   VIXCLS: vix
-  FEDFUNDS: taux_directeur
+  # DFF = taux directeur effectif QUOTIDIEN. On évite FEDFUNDS (moyenne
+  # mensuelle publiée le mois suivant -> fuite d'information future).
+  DFF: taux_directeur
+
+features:
+  horizon: 21          # cible = rendement des 21 prochains jours de bourse (~1 mois)
+  macro_lag_days: 1    # une donnée macro du jour t n'est utilisée qu'à t+1
 
 dates:
   start: "2010-01-01"
