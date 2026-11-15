@@ -1,0 +1,37 @@
+# Configuration centrale du projet : tous les scripts lisent ce fichier.
+
+seed: 42
+
+universe:
+  # Actions américaines (secteurs variés)
+  stocks: [AAPL, MSFT, GOOGL, AMZN, NVDA, META, JPM, BAC, XOM, CVX,
+           JNJ, PFE, PG, KO, WMT, HD, UNH, V, MA, DIS]
+  # ETF : obligations, or, indices
+  etfs: [TLT, IEF, GLD, QQQ]
+  # Indice de référence (baseline buy-and-hold)
+  benchmark: SPY
+
+macro_fred:
+  DGS10: taux_10_ans
+  VIXCLS: vix
+  FEDFUNDS: taux_directeur
+
+dates:
+  start: "2010-01-01"
+  end: "2025-12-31"
+
+# Découpage chronologique, fait AVANT tout prétraitement
+split:
+  train_end: "2019-12-31"
+  val_end: "2021-12-31"
+  # test = du 2022-01-01 à dates.end
+
+backtest:
+  rebalance: monthly        # fréquence de rebalancement
+  transaction_cost: 0.001   # 10 points de base par transaction
+  risk_free_rate: 0.0
+
+paths:
+  raw: data/raw
+  processed: data/processed
+  figures: reports/figures

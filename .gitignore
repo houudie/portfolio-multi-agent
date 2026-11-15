@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Données (régénérées par src/data/download.py)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Modèles entraînés
+*.pkl
+*.pt
+*.zip
+models_saved/
+
+# Divers
+.DS_Store
+.env
+.streamlit/secrets.toml
