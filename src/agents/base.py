@@ -35,5 +35,4 @@ class Orchestrator:
     def run(self, state: SharedState) -> SharedState:
         for agent in self.agents:
             state = agent.run(state)
-            state.log.append(f"{agent.name} : terminé")
         return state

@@ -1,5 +1,6 @@
 # Assistant multi-agent pour la sélection intelligente de portefeuilles financiers
 
+Projet Centrale Casablanca — rendu le 30 novembre 2026.
 
 Six agents spécialisés (Profil, Données, Prévision, Risque, Allocation, Conseiller), pilotés par un orchestrateur, transforment le profil d'un investisseur en portefeuille expliqué. Un moteur de backtest compare chaque allocation à des stratégies de référence (1/N, Markowitz, indice).
 
@@ -46,10 +47,23 @@ python -m src.data.prepare
 # 4. Backtest des stratégies de référence (train + validation)
 python -m src.backtest.run_baselines
 
-# 5. Lancer les tests
+# 5. Étape 4 - agent Prévision (membre B), puis backtest des prévisions
+python -m src.models.train_forecast
+python -m src.backtest.run_forecast_backtest
+
+# 6. Étape 4 - agent RL PPO (membre C)
+python -m src.models.rl.train_ppo
+
+# 7. Étape 4 - agent Risque (membre A)
+python -m src.agents.run_risk
+
+# 8. Démo du pipeline multi-agent complet (membre D)
+python -m src.agents.pipeline
+
+# 9. Lancer les tests
 python -m pytest
 
-# 6. Lancer l'application (à partir de l'étape 7)
+# 10. Lancer l'application (à partir de l'étape 7)
 streamlit run app/app.py
 ```
 
@@ -83,7 +97,7 @@ Toutes les étapes lisent `config.yaml` : univers d'actifs, dates de découpage 
 
 | Membre | Rôle |
 | --- | --- |
-| Abderrahmane  | Données, EDA, backtest, évaluation finale |
-| Rachid | Modèles de prévision, interprétabilité (SHAP) |
-| Hatim | Agent RL (PPO), agent Allocation |
-| Houda | Orchestrateur, agent Conseiller, Streamlit, rapport |
+| Membre A | Données, EDA, backtest, évaluation finale |
+| Membre B | Modèles de prévision, interprétabilité (SHAP) |
+| Membre C | Agent RL (PPO), agent Allocation |
+| Membre D | Orchestrateur, agent Conseiller, Streamlit, rapport |
