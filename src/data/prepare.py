@@ -70,12 +70,27 @@ def split_dates(index: pd.DatetimeIndex, cfg: dict) -> dict[str, pd.DatetimeInde
     }
 
 
-def purge(splits: dict[str, pd.DatetimeIndex], horizon: int) -> dict[str, pd.DatetimeIndex]:
-    """Retire les `horizon` derniers jours de train et val (cibles qui débordent)."""
+def purge(
+    splits: dict[str, pd.DatetimeIndex],
+    horizon: int
+) -> dict[str, pd.DatetimeIndex]:
+
+    if horizon <= 0:
+        raise ValueError("Horizon must be positive.")
+
+    if len(splits["train"]) <= horizon:
+        raise ValueError("Insufficient training observations.")
+
+    if len(splits["val"]) <= horizon:
+        raise ValueError("Insufficient validation observations.")
+
     return {
         "train": splits["train"][:-horizon],
         "val": splits["val"][:-horizon],
-        "test": splits["test"][:-horizon],  # la cible n'existe pas pour les derniers jours
+
+        # The final unavailable targets are already removed
+        # by features.dropna().
+        "test": splits["test"],
     }
 
 
@@ -87,12 +102,34 @@ def rsi(prices: pd.DataFrame, window: int = 14) -> pd.DataFrame:
     return 100 - 100 / (1 + gain / loss)
 
 
-def make_features(prices: pd.DataFrame, macro: pd.DataFrame, benchmark: str, horizon: int) -> pd.DataFrame:
-    """Tableau long : une ligne par (date, actif). Toutes les features sont causales."""
+
+def make_features(
+    prices: pd.DataFrame,
+    macro: pd.DataFrame,
+    benchmark: str,
+    horizon: int
+) -> pd.DataFrame:
+    """
+    Tableau long : une ligne par (date, actif).
+
+    Les features disponibles à la date t utilisent uniquement
+    les prix connus jusqu'à t-1.
+
+    La cible représente le rendement logarithmique des
+    horizon prochaines séances.
+    """
+    if benchmark not in prices.columns:
+        raise ValueError(f"Benchmark absent des prix : {benchmark}")
+
+    if horizon <= 0:
+        raise ValueError("Horizon must be positive.")
+
     logp = np.log(prices)
     ret = logp.diff()
+
     assets = [c for c in prices.columns if c != benchmark]
 
+    # 1. Calcul des indicateurs à partir des prix historiques
     per_asset = {
         "mom_21": logp - logp.shift(21),
         "mom_63": logp - logp.shift(63),
@@ -102,26 +139,57 @@ def make_features(prices: pd.DataFrame, macro: pd.DataFrame, benchmark: str, hor
         "rsi_14": rsi(prices),
         "drawdown_252": prices / prices.rolling(252).max() - 1,
     }
-    target = logp.shift(-horizon) - logp  # seule colonne qui regarde le futur
 
+    # 2. Décalage : les features à t utilisent les informations
+    # disponibles au plus tard à t-1.
+    per_asset = {
+        name: frame.shift(1)
+        for name, frame in per_asset.items()
+    }
+
+    # 3. Cible future : rendement logarithmique sur horizon séances
+    target = logp.shift(-horizon) - logp
+
+    # 4. Construction du panel par actif
     frames = []
-    for a in assets:
-        df = pd.DataFrame({name: f[a] for name, f in per_asset.items()})
-        df["target"] = target[a]
-        df["ticker"] = a
+
+    for asset in assets:
+        df = pd.DataFrame({
+            name: frame[asset]
+            for name, frame in per_asset.items()
+        })
+
+        df["target"] = target[asset]
+        df["ticker"] = asset
         frames.append(df)
+
     panel = pd.concat(frames)
 
+    # 5. Features de marché
     market = pd.DataFrame({
         "mkt_mom_21": per_asset["mom_21"][benchmark],
         "mkt_vol_21": per_asset["vol_21"][benchmark],
     })
+
+    # 6. Variables macroéconomiques
     macro_feats = macro.copy()
-    if "vix" in macro_feats:
-        macro_feats["vix_chg_21"] = macro_feats["vix"] - macro_feats["vix"].shift(21)
+
+    if "vix" in macro_feats.columns:
+        macro_feats["vix_chg_21"] = (
+            macro_feats["vix"] - macro_feats["vix"].shift(21)
+        )
+
+    # 7. Fusion des variables
     panel = panel.join(market).join(macro_feats)
+
     panel.index.name = "date"
-    return panel.reset_index().set_index(["date", "ticker"]).sort_index()
+
+    return (
+        panel.reset_index()
+        .set_index(["date", "ticker"])
+        .sort_index()
+    )
+
 
 
 # ---------------------------------------------------------------- main

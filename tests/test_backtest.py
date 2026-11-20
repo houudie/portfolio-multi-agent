@@ -14,7 +14,7 @@ def _prices(n=600, k=4, seed=0):
     return pd.DataFrame(data, index=idx, columns=[f"A{i}" for i in range(k)])
 
 
-def test_strategy_never_sees_the_future():
+def test_strategy_uses_information_before_execution():
     prices = _prices()
     seen = []
 
@@ -22,9 +22,23 @@ def test_strategy_never_sees_the_future():
         seen.append(hist.index.max())
         return equal_weight(hist)
 
-    res = run_backtest(prices, spy, "2019-01-01", "2019-12-31", name="espion", cost=0)
-    decision_dates = list(res.weights.index)
-    assert seen == decision_dates  # chaque décision ne voit que jusqu'à sa date
+    res = run_backtest(
+        prices,
+        spy,
+        "2019-01-01",
+        "2019-12-31",
+        name="espion",
+        cost=0
+    )
+
+    execution_dates = list(res.weights.index)
+
+    assert len(seen) == len(execution_dates)
+
+    for signal_date, execution_date in zip(
+        seen, execution_dates
+    ):
+        assert signal_date < execution_date
 
 
 def test_constant_prices_give_zero_return_without_costs():
