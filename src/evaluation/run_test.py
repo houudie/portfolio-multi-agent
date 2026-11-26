@@ -69,26 +69,19 @@ def forecast_test(cfg: dict, model_name: str) -> pd.DataFrame | None:
 # ------------------------------------------------------------------ règle du pipeline
 def profile_strategy(profile: str, detector: RegimeDetector, spy: pd.Series,
                      preds: pd.DataFrame | None, k: int = 8):
-    """Même règle que AllocationAgent (src/agents/pipeline.py), sous forme de stratégie.
-
-    Régime tendu -> variance minimale Ledoit-Wolf ; sinon top k des prévisions
-    (ou 1/N sans prévision) ; puis contraintes du profil.
-    À garder synchronisée avec AllocationAgent si la règle change.
-    """
+    """Même règle que AllocationAgent (règle B, choisie en validation) :
+    top k des prévisions (ou 1/N sans prévision), puis contraintes du profil.
+    `detector` et `spy` sont gardés pour la compatibilité mais ne changent plus les poids."""
     c = PROFILES[profile]
 
     def strategy(hist: pd.DataFrame) -> pd.Series:
         t = hist.index[-1]
-        regime = detector.predict(spy.loc[:t])
-        if regime == "tendu":
-            w = min_variance_lw()(hist)
-        elif preds is not None and latest_forecast(preds, t) is not None:
+        if preds is not None and latest_forecast(preds, t) is not None:
             w = top_k(preds, k)(hist)
         else:
             w = equal_weight(hist)
         return apply_constraints(w, DEFENSIVE, c["min_defensif"], c["poids_max"])
     return strategy
-
 
 def ppo_strategy():
     path = ROOT / "models_saved" / "ppo_portfolio.zip"
