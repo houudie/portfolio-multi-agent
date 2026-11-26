@@ -1,0 +1,2 @@
+modele,rmse,mae,bon_sens_%,ic_moyen,ic_ecart_type,icir,ic_positif_%
+lightgbm,0.0979,0.074,40.8979,-0.092,0.3216,-0.2862,35.0663

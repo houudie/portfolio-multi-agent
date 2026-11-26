@@ -1,0 +1,4 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+PPO,34.35,29.13,1.16,1.64,-31.94,1.08,-4.1,78.19
+1/N,12.47,14.75,0.87,1.18,-21.99,0.57,-2.15,4.72
+Indice SPY,11.24,18.01,0.68,0.94,-24.5,0.46,-2.6,0.0

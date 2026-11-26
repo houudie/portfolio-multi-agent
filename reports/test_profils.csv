@@ -1,0 +1,6 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+Assistant - prudent,4.28,10.47,0.45,0.62,-22.55,0.19,-1.52,44.4
+Assistant - équilibré,3.61,12.83,0.34,0.45,-25.56,0.14,-1.97,63.91
+Assistant - dynamique,2.28,15.0,0.23,0.28,-29.69,0.08,-2.46,68.0
+1/N,12.47,14.75,0.87,1.18,-21.99,0.57,-2.15,4.72
+Indice SPY,11.24,18.01,0.68,0.94,-24.5,0.46,-2.6,0.0

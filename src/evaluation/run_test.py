@@ -10,12 +10,14 @@ Ce que fait le script :
    (utilisable ensuite par le pipeline et l'application sur des dates de test).
 2. Mesure la qualité des prévisions sur le test (IC, RMSE...).
 3. Backteste sur le test, avec le même moteur : baselines, agent Risque, stratégies
-   avec prévisions, PPO (si un modèle entraîné existe) et la règle complète du
-   pipeline pour les trois profils.
+   avec prévisions et la règle complète du pipeline pour les trois profils.
+
+PPO est évalué à part, par src/evaluation/run_test_ppo.py : sur Mac, LightGBM et
+PyTorch embarquent chacun leur propre OpenMP et plantent dans le même programme.
 
 Usage :
-    python -m src.evaluation.run_test                    # modèle de prévision : lightgbm
-    python -m src.evaluation.run_test --model xgboost
+    python -m src.evaluation.run_test --model lightgbm
+    python -m src.evaluation.run_test_ppo                # PPO, dans un programme séparé
 
 Sorties :
     reports/test_forecast.csv, reports/test_results.csv, reports/test_profils.csv
@@ -83,19 +85,6 @@ def profile_strategy(profile: str, detector: RegimeDetector, spy: pd.Series,
         return apply_constraints(w, DEFENSIVE, c["min_defensif"], c["poids_max"])
     return strategy
 
-def ppo_strategy():
-    path = ROOT / "models_saved" / "ppo_portfolio.zip"
-    if not path.exists():
-        print("[ignoré] PPO : models_saved/ppo_portfolio.zip absent (lancer src.models.rl.train_ppo)")
-        return None
-    try:
-        from stable_baselines3 import PPO
-    except ImportError:
-        print("[ignoré] PPO : stable-baselines3 non installé")
-        return None
-    from src.models.rl.env import rl_strategy
-    return rl_strategy(PPO.load(path))
-
 
 # ------------------------------------------------------------------ figures
 def plot(results, title: str, path) -> None:
@@ -142,9 +131,6 @@ def main() -> None:
     if preds is not None:
         strategies[f"Top 8 - {args.model}"] = top_k(preds, k=8)
         strategies[f"Markowitz prévu - {args.model}"] = forecast_max_sharpe(preds)
-    ppo = ppo_strategy()
-    if ppo is not None:
-        strategies["PPO"] = ppo
 
     results = [run_backtest(prices[[bench]], buy_and_hold(bench), start, end, name=f"Indice {bench}", cost=cost)]
     for name, fn in strategies.items():
