@@ -50,6 +50,7 @@ python -m src.backtest.run_baselines
 # 5. Étape 4 - agent Prévision (membre B), puis backtest des prévisions
 python -m src.models.train_forecast
 python -m src.backtest.run_forecast_backtest
+python -m src.models.interpret --model lightgbm   # SHAP, permutation, analyse des erreurs
 
 # 6. Étape 4 - agent RL PPO (membre C)
 python -m src.models.rl.train_ppo
