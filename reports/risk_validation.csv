@@ -1,0 +1,7 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+Markowitz max Sharpe,14.92,11.02,1.32,1.8,-8.78,1.7,-1.6,41.99
+1/N,25.37,22.49,1.12,1.25,-28.17,0.9,-3.57,4.85
+Variance minimale Ledoit-Wolf,5.84,7.09,0.84,0.98,-9.64,0.61,-1.05,11.53
+"Régime : 1/N, variance min si tendu",10.14,19.03,0.6,0.62,-28.17,0.36,-2.99,16.43
+Variance minimale,3.05,5.36,0.59,0.72,-7.37,0.41,-0.76,5.97
+"Régime : 1/N, Markowitz si tendu",9.39,19.22,0.56,0.58,-28.17,0.33,-3.01,21.64
