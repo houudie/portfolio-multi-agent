@@ -46,12 +46,13 @@ def action_to_weights(action: np.ndarray, temperature: float = 3.0) -> np.ndarra
 
 class PortfolioSim:
     def __init__(self, prices: pd.DataFrame, step_days: int = 21, episode_steps: int = 24,
-                 cost: float = 0.001, risk_penalty: float = 0.0, seed: int = 0):
+                 cost: float = 0.001, risk_penalty: float = 0.0, turnover_penalty: float = 0.0, seed: int = 0):
         self.prices = prices.sort_index()
         self.values = self.prices.values
         self.n_assets = prices.shape[1]
         self.step_days, self.episode_steps = step_days, episode_steps
         self.cost, self.risk_penalty = cost, risk_penalty
+        self.turnover_penalty = turnover_penalty
         self.rng = np.random.default_rng(seed)
         last_start = len(prices) - step_days * episode_steps - 1
         if last_start <= LOOKBACK:
@@ -74,8 +75,8 @@ class PortfolioSim:
         path = rel @ new_weights                                          # valeur du portefeuille
         growth = path[-1] * (1 - self.cost * traded)
         daily = np.diff(path) / path[:-1]
-        reward = float(np.log(growth) - self.risk_penalty * daily.std() * np.sqrt(252))
-
+        reward = float(np.log(growth) - self.risk_penalty * daily.std() * np.sqrt(252)
+                       - self.turnover_penalty * traded)
         self.weights = new_weights * rel[-1] / path[-1]                   # dérive des poids
         self.t += self.step_days
         self.steps += 1

@@ -48,6 +48,7 @@ def test_reward_matches_portfolio_return():
     assert np.isclose(np.exp(reward), expected)
 
 
+
 def test_episode_ends():
     sim = PortfolioSim(_prices(), episode_steps=4)
     sim.reset()
@@ -62,3 +63,19 @@ def test_gymnasium_env_passes_checks():
 
     from src.models.rl.env import PortfolioEnv
     check_env(PortfolioEnv(_prices()))
+
+
+def test_turnover_penalty_lowers_reward():
+    import numpy as np
+    import pandas as pd
+    from src.models.rl.env import PortfolioSim
+
+    idx = pd.bdate_range("2015-01-01", periods=800)
+    prices = pd.DataFrame(100.0, index=idx, columns=["A", "B"])
+    rewards = []
+    for pen in (0.0, 0.05):
+        sim = PortfolioSim(prices, cost=0.0, turnover_penalty=pen)
+        sim.reset(start=200)
+        _, r, _, _ = sim.step(np.array([1.0, 0.0]))   # passe de 50/50 à 100/0 : turnover = 1
+        rewards.append(r)
+    assert rewards[0] == 0.0 and abs(rewards[1] + 0.05) < 1e-9

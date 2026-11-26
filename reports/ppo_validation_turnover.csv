@@ -1,0 +1,3 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+1/N,25.37,22.49,1.12,1.25,-28.17,0.9,-3.57,4.85
+PPO,32.7,30.25,1.09,1.18,-34.68,0.94,-4.59,56.99

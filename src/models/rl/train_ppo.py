@@ -26,6 +26,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--steps", type=int, default=200_000)
     parser.add_argument("--risk", type=float, default=0.1, help="pénalité de volatilité")
+    parser.add_argument("--turnover", type=float, default=0.0, help="pénalité de turnover")
+    parser.add_argument("--suffix", default="", help="ex. _turnover : ne pas écraser le modèle retenu")
     args = parser.parse_args()
 
     cfg = load_config()
@@ -39,23 +41,25 @@ def main() -> None:
     # 1. L'agent ne voit QUE la période d'entraînement
     log_dir = ROOT / "models_saved" / "ppo_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    env = PortfolioEnv(px.loc[:train_end], cost=cost, risk_penalty=args.risk, seed=cfg["seed"])
+    env = PortfolioEnv(px.loc[:train_end], cost=cost, risk_penalty=args.risk,
+                       turnover_penalty=args.turnover, seed=cfg["seed"])
     check_env(env)
-    env = Monitor(env, str(log_dir / "train"))
+    env = Monitor(env, str(log_dir / f"train{args.suffix}"))
 
     model = PPO("MlpPolicy", env, n_steps=1024, batch_size=128, learning_rate=3e-4,
                 gamma=0.95, ent_coef=0.01, seed=cfg["seed"], verbose=0)
     print(f"Entraînement PPO : {args.steps} pas ...", flush=True)
     model.learn(total_timesteps=args.steps, progress_bar=False)
-    model.save(ROOT / "models_saved" / "ppo_portfolio")
+    model.save(ROOT / "models_saved" / f"ppo_portfolio{args.suffix}")
 
     # 2. Courbe d'apprentissage (récompense moyenne par épisode)
-    log = pd.read_csv(log_dir / "train.monitor.csv", skiprows=1)
+    log = pd.read_csv(log_dir / f"train{args.suffix}.monitor.csv", skiprows=1)
     fig, ax = plt.subplots(figsize=(9, 4))
     log["r"].rolling(50, min_periods=1).mean().plot(ax=ax)
     ax.set(title="PPO : récompense par épisode (moyenne glissante sur 50 épisodes)",
            xlabel="Épisode", ylabel="Récompense (log-rendement sur 2 ans)")
-    fig.savefig(ROOT / cfg["paths"]["figures"] / "09_ppo_apprentissage.png", dpi=150, bbox_inches="tight")
+    fig.savefig(ROOT / cfg["paths"]["figures"] / f"09_ppo_apprentissage{args.suffix}.png",
+                dpi=150, bbox_inches="tight")
 
     # 3. Backtest en validation, avec le même moteur que les autres stratégies
     start = train_end + pd.Timedelta(days=1)
@@ -65,7 +69,7 @@ def main() -> None:
         run_backtest(px, rl_strategy(model), start, end, name="PPO", cost=cost),
     ]
     table = compare(results)
-    table.to_csv(ROOT / "reports" / "ppo_validation.csv")
+    table.to_csv(ROOT / "reports" / f"ppo_validation{args.suffix}.csv")
     print(f"\n=== PPO vs 1/N - validation ({start.date()} -> {end.date()}) ===")
     print(table.to_string())
     print("\nPoids moyens choisis par PPO :")
