@@ -1,0 +1,11 @@
+strategie,rendement_annuel_%,volatilite_annuelle_%,sharpe,sortino,drawdown_max_%,calmar,cvar_95_jour_%,turnover_moyen_%
+Markowitz max Sharpe,14.92,11.02,1.32,1.8,-8.78,1.7,-1.6,41.99
+Markowitz prévu - lightgbm,13.66,11.26,1.19,1.43,-17.76,0.77,-1.71,62.88
+Top 8 - lightgbm,33.93,29.15,1.15,1.4,-31.7,1.07,-4.4,69.71
+1/N,25.37,22.49,1.12,1.25,-28.17,0.9,-3.57,4.85
+Markowitz prévu - xgboost,11.98,11.43,1.05,1.22,-17.98,0.67,-1.74,58.21
+Top 8 - xgboost,31.32,31.56,1.02,1.22,-37.89,0.83,-4.71,64.55
+Markowitz prévu - ridge,9.69,9.82,0.99,1.16,-13.42,0.72,-1.5,33.45
+Markowitz prévu - foret_aleatoire,9.46,9.71,0.98,1.13,-13.83,0.68,-1.5,35.22
+Top 8 - ridge,27.94,30.6,0.96,1.18,-31.47,0.89,-4.53,59.93
+Top 8 - foret_aleatoire,24.63,32.33,0.84,1.0,-38.58,0.64,-4.86,64.67
