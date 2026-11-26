@@ -15,9 +15,55 @@ from src.config import ROOT, load_config
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}"
 
 
-def download_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
-    data = yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False)
-    return data["Close"].sort_index()
+def download_prices(
+    tickers: list[str],
+    start: str,
+    end: str
+) -> pd.DataFrame:
+
+    # yfinance uses an exclusive end date.
+    # Our project configuration uses an inclusive end date.
+    end_exclusive = (
+        pd.Timestamp(end) + pd.Timedelta(days=1)
+    ).strftime("%Y-%m-%d")
+
+    data = yf.download(
+        tickers,
+        start=start,
+        end=end_exclusive,
+        auto_adjust=True,
+        progress=False,
+        group_by="column",
+        timeout=30,
+    )
+
+    if data is None or data.empty:
+        raise RuntimeError("Yahoo Finance returned an empty dataset.")
+
+    if not isinstance(data.columns, pd.MultiIndex):
+        raise RuntimeError(
+            "Unexpected Yahoo Finance output format."
+        )
+
+    if "Close" not in data.columns.get_level_values(0):
+        raise RuntimeError("Adjusted Close prices are unavailable.")
+
+    prices = data["Close"].copy()
+
+    missing = [
+        ticker for ticker in tickers
+        if ticker not in prices.columns
+        or prices[ticker].notna().sum() == 0
+    ]
+
+    if missing:
+        raise RuntimeError(
+            f"Missing or empty tickers: {missing}"
+        )
+
+    prices = prices.reindex(columns=tickers).sort_index()
+
+    return prices
 
 
 def download_fred(series: dict[str, str], start: str, end: str) -> pd.DataFrame:

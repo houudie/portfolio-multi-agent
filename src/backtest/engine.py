@@ -35,45 +35,226 @@ def month_end_dates(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(s.groupby(index.to_period("M")).last().values)
 
 
-def run_backtest(prices: pd.DataFrame, strategy: Strategy, start: str, end: str,
-                 name: str = "strategie", cost: float = 0.001, lookback: int = 252) -> BacktestResult:
-    prices = prices.sort_index()
-    simple = prices.pct_change()
+
+def run_backtest(
+    prices: pd.DataFrame,
+    strategy: Strategy,
+    start: str,
+    end: str,
+    name: str = "strategie",
+    cost: float = 0.001,
+    lookback: int = 252,
+) -> BacktestResult:
+    """
+    Backtest mensuel sur prix de clôture.
+
+    Convention :
+    - Le signal est calculé avec les données jusqu'à la séance
+      précédant l'exécution.
+    - L'exécution est effectuée à la clôture de la date de
+      rebalancement.
+    - Les nouveaux poids sont actifs sur la période suivante.
+    - Les frais sont déduits à la date de transaction.
+    """
+
+    # ---------------------------------------------------------
+    # 1. Validation des entrées
+    # ---------------------------------------------------------
+
+    if prices.empty:
+        raise ValueError("Le DataFrame des prix est vide.")
+
+    if not prices.index.is_unique:
+        raise ValueError("Les dates doivent être uniques.")
+
+    if not prices.columns.is_unique:
+        raise ValueError("Les tickers doivent être uniques.")
+
+    prices = prices.sort_index().astype(float)
+
+    if not np.isfinite(prices.to_numpy()).all():
+        raise ValueError("Les prix contiennent des valeurs manquantes ou infinies.")
+
+    if (prices <= 0).any().any():
+        raise ValueError("Tous les prix doivent être strictement positifs.")
+
+    if not 0 <= cost < 1:
+        raise ValueError("Le coût doit être compris entre 0 inclus et 1 exclu.")
+
+    if lookback <= 0:
+        raise ValueError("lookback doit être positif.")
+
+    simple = prices.pct_change(fill_method=None)
+
     days = prices.loc[start:end].index
+
+    if len(days) == 0:
+        raise ValueError("Aucune séance disponible dans la période demandée.")
+
     before = prices.index[prices.index < days[0]]
-    if len(before) == 0:
-        raise ValueError("Il faut au moins un jour d'historique avant `start`.")
+
+    if len(before) < 2:
+        raise ValueError(
+            "Deux séances historiques préalables sont nécessaires "
+            "pour calculer le signal avant exécution."
+        )
+
+    # ---------------------------------------------------------
+    # 2. Dates de rebalancement
+    # ---------------------------------------------------------
 
     rebal = set(month_end_dates(days)) - {days[-1]}
 
-    def decide(t):
-        hist = prices.loc[:t].iloc[-lookback:]
-        w = strategy(hist).reindex(prices.columns).fillna(0.0)
-        if (w < -1e-9).any() or abs(w.sum() - 1) > 1e-6:
-            raise ValueError(f"{name} : poids invalides le {t.date()} (somme {w.sum():.4f})")
+    def previous_session(t):
+        position = prices.index.get_loc(t)
+
+        if position == 0:
+            raise ValueError("Aucune séance précédente disponible.")
+
+        return prices.index[position - 1]
+
+    # ---------------------------------------------------------
+    # 3. Fonction de décision
+    # ---------------------------------------------------------
+
+    def decide(signal_date):
+
+        hist = prices.loc[:signal_date].iloc[-lookback:]
+
+        if hist.empty:
+            raise ValueError("Historique insuffisant pour la stratégie.")
+
+        raw_weights = strategy(hist)
+
+        if not isinstance(raw_weights, pd.Series):
+            raise TypeError("La stratégie doit retourner une Series.")
+
+        if not raw_weights.index.is_unique:
+            raise ValueError("Les indices des poids doivent être uniques.")
+
+        unknown = raw_weights.index.difference(prices.columns)
+
+        if len(unknown):
+            raise ValueError(f"Actifs inconnus : {list(unknown)}")
+
+        w = raw_weights.reindex(
+            prices.columns,
+            fill_value=0.0
+        ).astype(float)
+
+        if not np.isfinite(w.to_numpy()).all():
+            raise ValueError("Les poids contiennent des NaN ou des valeurs infinies.")
+
+        if (w < -1e-9).any():
+            raise ValueError("Les poids négatifs ne sont pas autorisés.")
+
+        if abs(float(w.sum()) - 1.0) > 1e-6:
+            raise ValueError(
+                f"Somme des poids invalide : {w.sum():.8f}"
+            )
+
+        # Corriger uniquement les éventuelles petites erreurs numériques.
+        w = w.clip(lower=0.0)
+        w = w / w.sum()
+
         return w
 
-    # décision initiale à la clôture de la veille du début
-    w = decide(before[-1])
-    weights, turnover = {before[-1]: w}, {before[-1]: w.abs().sum()}
-    pending_cost = cost * w.abs().sum()
+    # ---------------------------------------------------------
+    # 4. Allocation initiale
+    # ---------------------------------------------------------
+
+    initial_execution_date = before[-1]
+    initial_signal_date = before[-2]
+
+    w = decide(initial_signal_date)
+
+    initial_turnover = float(w.abs().sum())
+
+    if cost * initial_turnover >= 1:
+        raise ValueError("Frais initiaux excessifs.")
+
+    weights = {
+        initial_execution_date: w
+    }
+
+    turnover = {
+        initial_execution_date: initial_turnover
+    }
 
     out = []
-    for d in days:
-        r = simple.loc[d].fillna(0.0)
-        port = float((w * r).sum())
-        out.append(port - pending_cost)
-        pending_cost = 0.0
-        w = w * (1 + r) / (1 + port)          # dérive des poids
+
+    # ---------------------------------------------------------
+    # 5. Simulation journalière
+    # ---------------------------------------------------------
+
+    for i, d in enumerate(days):
+
+        r = simple.loc[d]
+
+        if not np.isfinite(r.to_numpy()).all():
+            raise ValueError(
+                f"Rendement manquant ou non fini le {d.date()}."
+            )
+
+        # Rendement brut du portefeuille avec les poids précédents.
+        gross_return = float((w * r).sum())
+
+        if gross_return <= -1:
+            raise ValueError("Perte totale ou supérieure à 100 %.")
+
+        # Dérive naturelle des poids sans transaction.
+        drifted_w = w * (1 + r) / (1 + gross_return)
+
+        fee_factor = 1.0
+
+        # Frais d'entrée initiaux.
+        if i == 0:
+            fee_factor *= 1 - cost * initial_turnover
+
+        # -----------------------------------------------------
+        # Rebalancement mensuel
+        # -----------------------------------------------------
+
         if d in rebal:
-            new_w = decide(d)
-            traded = float((new_w - w).abs().sum())
-            pending_cost = cost * traded        # payé sur le rendement du jour suivant
-            weights[d], turnover[d] = new_w, traded
+
+            # Le signal ne connaît pas la clôture du jour d.
+            signal_date = previous_session(d)
+
+            new_w = decide(signal_date)
+
+            traded = float((new_w - drifted_w).abs().sum())
+
+            fee_factor *= 1 - cost * traded
+
+            if fee_factor <= 0:
+                raise ValueError("Facteur de capital après frais invalide.")
+
+            weights[d] = new_w
+            turnover[d] = traded
+
+            # Les nouveaux poids s'appliquent à partir de la
+            # prochaine période de rendement.
             w = new_w
 
-    return BacktestResult(name=name, returns=pd.Series(out, index=days, name=name),
-                          weights=pd.DataFrame(weights).T, turnover=pd.Series(turnover))
+        else:
+            w = drifted_w
+
+        # Rendement net intégrant les frais à la bonne date.
+        net_return = (1 + gross_return) * fee_factor - 1
+
+        out.append(net_return)
+
+    # ---------------------------------------------------------
+    # 6. Résultat
+    # ---------------------------------------------------------
+
+    return BacktestResult(
+        name=name,
+        returns=pd.Series(out, index=days, name=name),
+        weights=pd.DataFrame(weights).T.sort_index(),
+        turnover=pd.Series(turnover).sort_index(),
+    )
+
 
 
 def metrics(res: BacktestResult, periods: int = 252) -> dict:
