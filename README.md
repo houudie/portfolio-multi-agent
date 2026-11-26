@@ -60,6 +60,9 @@ python -m src.agents.run_risk
 # 8. Démo du pipeline multi-agent complet (membre D)
 python -m src.agents.pipeline
 
+# Évaluation finale sur le test (Houda) - UNE SEULE FOIS, quand tout est figé
+python -m src.evaluation.run_test --model lightgbm
+
 # 9. Lancer les tests
 python -m pytest
 

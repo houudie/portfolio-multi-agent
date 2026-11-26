@@ -65,16 +65,37 @@ def apply_constraints(weights: pd.Series, defensive: list[str], min_defensive: f
         if w[risky].sum() > 0:
             w[risky] = (1 - min_defensive) * w[risky] / w[risky].sum()
 
-    # plafond : on redistribue l'excédent sur les actifs encore sous le plafond
+    # plafond : on redistribue l'excédent sur les actifs encore sous leur plafond.
+    # Les ETF défensifs peuvent dépasser max_weight si c'est nécessaire pour atteindre
+    # la part défensive minimale (ex. prudent : 3 ETF x 15 % = 45 % < 50 %).
     max_weight = max(max_weight, 1.0 / len(w))
+    cap = pd.Series(max_weight, index=w.index)
+    if dfn:
+        cap[dfn] = max(max_weight, min_defensive / len(dfn))
+    def redistribute(excess: float, group: list[str]) -> float:
+        """Verse `excess` sur les actifs du groupe sous leur plafond ; renvoie le reste."""
+        room = pd.Index(group)[(w[group] < cap[group] - 1e-12).values]
+        if len(room) == 0 or excess <= 0:
+            return excess
+        free = (cap[room] - w[room]).sum()
+        add = min(excess, free)
+        share = (w[room] + 1e-9) / (w[room] + 1e-9).sum()
+        w[room] += add * share
+        return excess - add
+
     for _ in range(100):
-        over = w > max_weight + 1e-12
+        over = w > cap + 1e-12
         if not over.any():
             break
-        excess = (w[over] - max_weight).sum()
-        w[over] = max_weight
-        room = (~over) & (w < max_weight)
-        w[room] += excess * (w[room] + 1e-9) / (w[room] + 1e-9).sum()
+        for group, other in ((dfn, risky), (risky, dfn)):
+            g_over = [a for a in group if over[a]]
+            if not g_over:
+                continue
+            excess = float((w[g_over] - cap[g_over]).sum())
+            w[g_over] = cap[g_over]
+            # d'abord dans le même groupe (la part défensive ne baisse pas), sinon dans l'autre
+            rest = redistribute(excess, group)
+            redistribute(rest, other)
     return w / w.sum()
 
 

@@ -34,3 +34,11 @@ def test_constraints_respected():
 def test_agent_writes_profile():
     state = ProfileAgent().run(SharedState(profile={"reponses": _answers(-1)}))
     assert state.profile["profil"] == "dynamique" and state.profile["poids_max"] == 0.30
+
+
+def test_prudent_reaches_defensive_minimum_with_three_etfs():
+    # 3 ETF défensifs plafonnés à 15 % ne font que 45 % : le plafond défensif est relevé
+    w = pd.Series(1 / 24, index=[f"S{i}" for i in range(21)] + ["TLT", "IEF", "GLD"])
+    out = apply_constraints(w, ["TLT", "IEF", "GLD"], min_defensive=0.5, max_weight=0.15)
+    assert out[["TLT", "IEF", "GLD"]].sum() >= 0.5 - 1e-9
+    assert out.drop(["TLT", "IEF", "GLD"]).max() <= 0.15 + 1e-9
