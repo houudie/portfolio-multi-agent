@@ -71,6 +71,8 @@ python -m src.agents.pipeline                        # démo du pipeline complet
  
 # 7. Évaluation finale sur le test (Houda) - UNE SEULE FOIS, quand tout est figé
 python -m src.evaluation.run_test --model lightgbm
+python -m src.evaluation.run_test_ppo                # PPO, programme séparé (conflit OpenMP sur Mac)
+python -m src.evaluation.robustness                 # bootstrap du Sharpe, frais, IC par année, diagnostic macro
  
 # 8. Tests automatiques
 python -m pytest
@@ -109,8 +111,8 @@ Toutes les étapes lisent `config.yaml` : univers d'actifs, dates de découpage,
  
 | Membre | Rôle |
 | --- | --- |
-| Houda | Données, EDA, moteur de backtest, agent Risque, évaluation finale |
-| Rachid | Modèles de prévision, interprétabilité (SHAP, permutation, analyse des erreurs) |
-| Abderrahmane | Agent RL (PPO), pénalité de turnover |
-| Hatim | Orchestrateur, agents Profil, Allocation et Conseiller, application Streamlit |
+| Houda Ait Hamou | Données, EDA, moteur de backtest, agent Risque, évaluation finale, robustesse |
+| Rachid Hadi | Modèles de prévision, interprétabilité (SHAP, permutation, analyse des erreurs) |
+| Abderrahmane Hasni | Agent RL (PPO), pénalité de turnover |
+| Hatim Taouil | Orchestrateur, agents Profil, Allocation et Conseiller, application Streamlit |
  
